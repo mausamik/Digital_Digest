@@ -43,9 +43,41 @@ def ingest_articles():
         db.add(article)
         saved += 1
 
-    db.commit()
-    db.close()
-    return {
+    response =  {
         "saved_articles": saved,
         "total_fetched": len(articles)
     }
+    db.commit()
+    db.close()
+    return response 
+    
+
+@app.get("/today")
+def get_today_article(min_words: int = 300):
+    db = database.SessionLocal()
+
+    article = (
+        db.query(models.Article)
+        .filter(models.Article.used == False)
+        .filter(models.Article.word_count >= min_words)
+        .order_by(models.Article.id)
+        .first()
+    )
+
+    if not article:
+        db.close()
+        return {"message": "No unread articles available"}
+
+    article.used = True
+    response =  {
+        "title": article.title,
+        "word_count": article.word_count,
+        "url": article.url,
+        "text": article.text[:500] + "..." if len(article.text) > 500 else article.text
+    }
+
+    db.commit()
+    db.close()
+    return response
+
+    
